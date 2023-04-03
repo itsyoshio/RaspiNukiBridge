@@ -30,7 +30,10 @@ class WebServer:
                         web.get('/lockState', self.nuki_state),
                         web.get('/callback/add', self.callback_add),
                         web.get('/callback/list', self.callback_list),
-                        web.get('/callback/remove', self.callback_remove)])
+                        web.get('/callback/remove', self.callback_remove),
+                        web.get('/verify_pin', self.verify_pin),
+                        web.get('/request_last_log_entry', self.request_last_log_entry),
+                        ])
         app.on_startup.append(self._startup)
         web.run_app(app, host=self._host, port=self._port)
 
@@ -164,6 +167,23 @@ class WebServer:
         await n.lock()
         res = json.dumps({"success": True, "batteryCritical": n.is_battery_critical})
         return web.Response(text=res)
+
+    async def verify_pin(self, request):
+        if not self._check_token(request):
+            raise web.HTTPForbidden()
+        n = self.nuki_manager.nuki_by_id(int(request.query["nukiId"], base=16))
+        await n.verify_pin(int(request.query["pin"], base=10))
+        res = json.dumps({"success": True, "batteryCritical": n.is_battery_critical})
+        return web.Response(text=res)
+
+    async def request_last_log_entry(self, request):
+        if not self._check_token(request):
+            raise web.HTTPForbidden()
+        n = self.nuki_manager.nuki_by_id(int(request.query["nukiId"], base=16))
+        await n.request_last_log_entry(int(request.query["pin"], base=10))
+        res = json.dumps({"success": True, "batteryCritical": n.is_battery_critical})
+        return web.Response(text=res)
+
 
     async def nuki_unlock(self, request):
         if not self._check_token(request):
