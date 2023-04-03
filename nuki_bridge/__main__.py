@@ -3,7 +3,7 @@ import logging
 import argparse
 
 from config import init_config, _random_app_id_and_token, _generate_bridge_keys, get_config_file, get_addon_config_file
-from nuki import Nuki
+from nuki import NukiDevice
 from scan_ble import find_ble_device
 from utils import logger, handler
 from web_server import WebServer
@@ -12,6 +12,8 @@ logging.getLogger("aiohttp").addHandler(handler)
 logging.getLogger("aiohttp").setLevel(logging.ERROR)
 logging.getLogger("bleak").addHandler(handler)
 logging.getLogger("bleak").setLevel(logging.ERROR)
+logging.getLogger("nuki").addHandler(handler)
+logging.getLogger("nuki").setLevel(logging.INFO)
 
 
 def _add_devices_to_manager(data, nuki_manager):
@@ -21,7 +23,7 @@ def _add_devices_to_manager(data, nuki_manager):
         nuki_public_key = bytes.fromhex(ls["nuki_public_key"])
         bridge_public_key = bytes.fromhex(ls["bridge_public_key"])
         bridge_private_key = bytes.fromhex(ls["bridge_private_key"])
-        n = Nuki(address, auth_id, nuki_public_key, bridge_public_key, bridge_private_key)
+        n = NukiDevice(address, auth_id, nuki_public_key, bridge_public_key, bridge_private_key, nuki_manager.app_id, nuki_manager.name, nuki_manager.type_id)
         n.retry = ls.get("retry", 5)
         n.connection_timeout = ls.get("connection_timeout", 10)
         n.command_timeout = ls.get("command_timeout", 30)
@@ -72,7 +74,7 @@ if __name__ == "__main__":
             address = find_ble_device('Nuki_.*', logger)
 
         bridge_public_key, bridge_private_key = _generate_bridge_keys()
-        nuki = Nuki(address, None, None, bridge_public_key, bridge_private_key)
+        nuki = NukiDevice(address, None, None, bridge_public_key, bridge_private_key, nuki_manager.app_id, nuki_manager.name, nuki_manager.type_id)
         nuki_manager.add_nuki(nuki)
 
         loop = asyncio.get_event_loop()
@@ -97,5 +99,7 @@ if __name__ == "__main__":
             host = data["server"]["host"]
             port = data["server"]["port"]
             token = data["server"]["token"]
-            web_server = WebServer(host, port, token, nuki_manager)
+            loop = asyncio.get_event_loop()
+            web_server = WebServer(host, port, token, nuki_manager, loop)
+            loop.create_task(nuki_manager.start_scanning())
             web_server.start()

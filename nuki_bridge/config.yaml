@@ -17,12 +17,10 @@ ports_description:
 host_dbus: true
 image: ghcr.io/regevbr/nuki_bridge/{arch}
 options:
-  adapter: hci0
   command_timeout: 30
   connection_timeout: 10
   retry: 5
 schema:
-  adapter: str
   command_timeout: float
   connection_timeout: float
   retry: int

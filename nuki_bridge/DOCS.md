@@ -46,10 +46,6 @@ Use this instead of the [Nuki Bridge](https://nuki.io/en/bridge/) device.
 
 **Note**: _Remember to restart the add-on when the configuration is changed._
 
-### Option: `adapter`
-
-The `adapter` option points to the hci device id (i.e `hci0`)
-
 ### Option: `retry`
 
 The `retry` sets the number of retires when sending commands to the Nuki device

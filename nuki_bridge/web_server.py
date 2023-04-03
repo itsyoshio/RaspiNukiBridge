@@ -4,14 +4,14 @@ import json
 import uuid
 
 from aiohttp import web, ClientSession
+from const import NukiConst, NukiErrorException
 
 from utils import logger
-from nuki import DeviceType, BridgeType
 
 
 class WebServer:
 
-    def __init__(self, host, port, token, nuki_manager):
+    def __init__(self, host, port, token, nuki_manager, loop=None):
         self._host = host
         self._port = port
         self._token = token
@@ -19,9 +19,10 @@ class WebServer:
         self._start_datetime = None
         self._server_id = uuid.getnode() & 0xFFFFFFFF  # Truncate server_id to 32 bit, OpenHub doesn't like it too big
         self._http_callbacks = [None, None, None]  # Nuki Bridge support up to 3 callbacks
+        self._loop = loop
 
     def start(self):
-        app = web.Application()
+        app = web.Application(loop=self._loop)
         app.add_routes([web.get('/info', self.nuki_info),
                         web.get('/list', self.nuki_list),
                         web.get('/lock', self.nuki_lock),
@@ -35,26 +36,28 @@ class WebServer:
                         web.get('/request_last_log_entry', self.request_last_log_entry),
                         ])
         app.on_startup.append(self._startup)
-        web.run_app(app, host=self._host, port=self._port)
+        web.run_app(app, host=self._host, port=self._port, loop=self._loop)
 
     @staticmethod
     def _get_nuki_last_state(nuki):
-        state = {"mode": nuki.last_state["nuki_state"].value,
-                 "state": nuki.last_state["lock_state"].value,
-                 "stateName": nuki.last_state["lock_state"].name,
+        current_time=nuki.last_state["current_time"]
+        timestamp=datetime.datetime(current_time.year,current_time.month,current_time.day,current_time.hour,current_time.minute,current_time.second)
+        state = {"mode": nuki.last_state["nuki_state"].intvalue,
+                 "state": nuki.last_state["lock_state"].intvalue,
+                 "stateName": str(nuki.last_state["lock_state"]),
                  "batteryCritical": nuki.is_battery_critical,
                  "batteryCharging": nuki.is_battery_charging,
                  "batteryChargeState": nuki.battery_percentage,
                  "keypadBatteryCritical": False,  # How to get this from bt api?
-                 "doorsensorState": nuki.last_state["door_sensor_state"].value,
-                 "doorsensorStateName": nuki.last_state["door_sensor_state"].name,
+                 "doorsensorState": nuki.last_state["door_sensor_state"].intvalue,
+                 "doorsensorStateName": str(nuki.last_state["door_sensor_state"]),
                  "ringactionTimestamp": None,  # How to get this from bt api?
                  "ringactionState": None,  # How to get this from bt api?
-                 "timestamp": nuki.last_state["current_time"].isoformat().split(".")[0],
+                 "timestamp": timestamp.isoformat().split(".")[0],
                  "success": True,
                  }
 
-        if nuki.device_type == DeviceType.OPENER:
+        if nuki.device_type == NukiConst.NukiDeviceType.OPENER:
             state["ringactionTimestamp"] = nuki.last_state["current_time"].isoformat().split(".")[0]
             state["ringactionState"] = nuki.last_state["last_lock_action_completion_status"]
 
@@ -76,7 +79,7 @@ class WebServer:
 
     async def _startup(self, _app):
         self._start_datetime = datetime.datetime.now()
-        self.nuki_manager.start()
+        # await self.nuki_manager.start_scanning()
 
     async def callback_add(self, request):
         if not self._check_token(request):
@@ -117,7 +120,7 @@ class WebServer:
     async def nuki_info(self, request):
         if not self._check_token(request):
             raise web.HTTPForbidden()
-        resp = {"bridgeType": BridgeType.SW.value,
+        resp = {"bridgeType": NukiConst.BridgeType.SW.intvalue,
                 # The hardwareId should not be sent if bridgeType is BRIDGE_SW, but the homeassistant
                 # integration expects it
                 "ids": {"hardwareId": self._server_id, "serverId": self._server_id},
@@ -172,16 +175,24 @@ class WebServer:
         if not self._check_token(request):
             raise web.HTTPForbidden()
         n = self.nuki_manager.nuki_by_id(int(request.query["nukiId"], base=16))
-        await n.verify_pin(int(request.query["pin"], base=10))
-        res = json.dumps({"success": True, "batteryCritical": n.is_battery_critical})
+        try:
+            ret = await n.verify_pin(int(request.query["pin"], base=10))
+        except NukiErrorException as ex:
+            res = json.dumps({"success" : False, "error_code": ex.error_code})
+        else:
+            res = json.dumps({"success": ret})
         return web.Response(text=res)
 
     async def request_last_log_entry(self, request):
         if not self._check_token(request):
             raise web.HTTPForbidden()
         n = self.nuki_manager.nuki_by_id(int(request.query["nukiId"], base=16))
-        await n.request_last_log_entry(int(request.query["pin"], base=10))
-        res = json.dumps({"success": True, "batteryCritical": n.is_battery_critical})
+        try:
+            ret = await n.request_last_log_entry(int(request.query["pin"], base=10))
+        except NukiErrorException as ex:
+            res = json.dumps({"success" : False, "error_code": ex.error_code})
+        else:
+            res = json.dumps(ret, default=lambda obj:"")
         return web.Response(text=res)
 
 

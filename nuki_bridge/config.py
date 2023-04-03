@@ -7,7 +7,7 @@ import yaml
 from nacl.public import PrivateKey
 
 from consts import CONF_FILE_NAME, ADDON_CONF_FILE_NAME, DATA_PATH
-from nuki import NukiManager, Nuki
+from nuki import NukiManager, NukiDevice
 from scan_ble import find_ble_device
 from utils import logger
 
@@ -34,7 +34,6 @@ def init_config(config_file, addon_config_file):
             'server': {
                 'host': '0.0.0.0',
                 'port': '8080',
-                'adapter': 'hci0',
                 'name': 'RaspiNukiBridge',
                 'app_id': app_id,
                 'token': token
@@ -48,18 +47,12 @@ def init_config(config_file, addon_config_file):
     global global_retry
     global global_connection_timeout
     global global_command_timeout
-    if "adapter" in addon_data:
-        data["server"]["adapter"] = addon_data["adapter"]
-    if "retry" in addon_data:
-        global_retry = addon_data["retry"]
-    if "connection_timeout" in addon_data:
-        global_connection_timeout = addon_data["connection_timeout"]
-    if "command_timeout" in addon_data:
-       global_command_timeout = addon_data["command_timeout"]
+    global_retry = addon_data.get("retry")
+    global_connection_timeout = addon_data.get("connection_timeout")
+    global_command_timeout = addon_data.get("command_timeout")
     name = data["server"]["name"]
     app_id = data["server"]["app_id"]
-    bt_adapter = data["server"].get("adapter", "hci0")
-    nuki_manager = NukiManager(name, app_id, bt_adapter)
+    nuki_manager = NukiManager(name, app_id)
 
     if 'smartlock' in data:
         for smartlock in data['smartlock']:
@@ -106,7 +99,7 @@ def init_config(config_file, addon_config_file):
     smartlock['address'] = address
 
     # Pair
-    nuki = Nuki(address, None, None, bridge_public_key, bridge_private_key)
+    nuki = NukiDevice(address, None, None, bridge_public_key, bridge_private_key, nuki_manager.app_id, nuki_manager.name, nuki_manager.type_id)
     nuki_manager.add_nuki(nuki)
 
     loop = asyncio.new_event_loop()
