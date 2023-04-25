@@ -7,7 +7,8 @@ import yaml
 from nacl.public import PrivateKey
 
 from consts import CONF_FILE_NAME, ADDON_CONF_FILE_NAME, DATA_PATH
-from nuki import NukiManager, NukiDevice
+from nuki import NukiDevice
+from nuki_manager import NukiManager
 from scan_ble import find_ble_device
 from utils import logger
 
