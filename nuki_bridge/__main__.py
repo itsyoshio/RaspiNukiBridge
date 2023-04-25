@@ -1,9 +1,9 @@
 import asyncio
 import logging
 import argparse
+from pyNukiBT import NukiDevice
 
 from config import init_config, _random_app_id_and_token, _generate_bridge_keys, get_config_file, get_addon_config_file
-from nuki import NukiDevice
 from scan_ble import find_ble_device
 from utils import logger, handler
 from web_server import WebServer
@@ -12,8 +12,8 @@ logging.getLogger("aiohttp").addHandler(handler)
 logging.getLogger("aiohttp").setLevel(logging.ERROR)
 logging.getLogger("bleak").addHandler(handler)
 logging.getLogger("bleak").setLevel(logging.ERROR)
-logging.getLogger("nuki").addHandler(handler)
-logging.getLogger("nuki").setLevel(logging.INFO)
+logging.getLogger("pyNukiBT").addHandler(handler)
+logging.getLogger("pyNukiBT").setLevel(logging.INFO)
 
 
 def _add_devices_to_manager(data, nuki_manager):

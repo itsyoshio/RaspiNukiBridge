@@ -4,11 +4,10 @@ import json
 import uuid
 
 from aiohttp import web, ClientSession
-from const import NukiConst, NukiErrorException
+from pyNukiBT import NukiDevice, NukiConst, NukiErrorException
 
 from utils import logger
 from nuki_manager import NukiManager
-from nuki import NukiDevice
 
 
 class WebServer:

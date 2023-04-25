@@ -3,10 +3,9 @@ from bleak import BleakScanner
 from bleak.exc import BleakDBusError
 from bleak.backends.device import BLEDevice
 from bleak.backends.scanner import AdvertisementData
+from pyNukiBT import NukiDevice, NukiConst
 
 from utils import logger
-from nuki import NukiDevice
-from const import NukiConst
 
 class NukiManager:
     def __init__(self, name, app_id):
