@@ -39,7 +39,10 @@ class NukiManager:
         return next(nuki for nuki in self._devices.values() if nuki.config.get("nuki_id") == nuki_id)
 
     def add_nuki(self, nuki: NukiDevice):
-        self._devices[nuki.address] = nuki
+        self._devices[nuki._address] = nuki
+        def _cb():
+            self.nuki_newstate(nuki)
+        nuki.subscribe(_cb)
 
     @property
     def device_list(self):
@@ -84,6 +87,6 @@ class NukiManager:
     async def _detected_ibeacon(self, device: BLEDevice, advertisement_data: AdvertisementData):
         if device.address in self._devices:
             nuki = self._devices[device.address]
-            await nuki.parse_advertisement_data(device, advertisement_data)
+            nuki.parse_advertisement_data(device, advertisement_data)
             if nuki.poll_needed():
                 await nuki.update_state()

@@ -7,16 +7,17 @@ from config import init_config, _random_app_id_and_token, _generate_bridge_keys,
 from scan_ble import find_ble_device
 from utils import logger, handler
 from web_server import WebServer
+from nuki_manager import NukiManager
 
 logging.getLogger("aiohttp").addHandler(handler)
 logging.getLogger("aiohttp").setLevel(logging.ERROR)
 logging.getLogger("bleak").addHandler(handler)
 logging.getLogger("bleak").setLevel(logging.ERROR)
 logging.getLogger("pyNukiBT").addHandler(handler)
-logging.getLogger("pyNukiBT").setLevel(logging.INFO)
+logging.getLogger("pyNukiBT").setLevel(logging.WARNING)
 
 
-def _add_devices_to_manager(data, nuki_manager):
+def _add_devices_to_manager(data, nuki_manager:NukiManager):
     for ls in data["smartlock"]:
         address = ls["address"]
         auth_id = bytes.fromhex(ls["auth_id"])
@@ -42,14 +43,17 @@ if __name__ == "__main__":
 
     if not args.verbose:
         logger.setLevel(level=logging.INFO)
+        logging.getLogger("pyNukiBT").setLevel(logging.WARNING)
         logging.getLogger("aiohttp").setLevel(level=logging.ERROR)
         logging.getLogger("bleak").setLevel(level=logging.ERROR)
     elif args.verbose == 1:
         logger.setLevel(level=logging.DEBUG)
+        logging.getLogger("pyNukiBT").setLevel(logging.INFO)
         logging.getLogger("aiohttp").setLevel(level=logging.INFO)
         logging.getLogger("bleak").setLevel(level=logging.INFO)
     elif args.verbose == 2:
         logger.setLevel(level=logging.DEBUG)
+        logging.getLogger("pyNukiBT").setLevel(logging.DEBUG)
         logging.getLogger("aiohttp").setLevel(level=logging.DEBUG)
         logging.getLogger("bleak").setLevel(level=logging.DEBUG)
 
@@ -75,16 +79,10 @@ if __name__ == "__main__":
 
         bridge_public_key, bridge_private_key = _generate_bridge_keys()
         nuki = NukiDevice(address, None, None, bridge_public_key, bridge_private_key, nuki_manager.app_id, nuki_manager.name, nuki_manager.type_id)
+        ret = nuki.pair()
+        logger.info(f"Pairing completed, nuki_public_key: {ret['nuki_public_key'].hex()}")
+        logger.info(f"Pairing completed, auth_id: {ret['auth_id'].hex()}")
         nuki_manager.add_nuki(nuki)
-
-        loop = asyncio.get_event_loop()
-
-        def pairing_completed(paired_nuki):
-            logger.info(f"Pairing completed, nuki_public_key: {paired_nuki.nuki_public_key.hex()}")
-            logger.info(f"Pairing completed, auth_id: {paired_nuki.auth_id.hex()}")
-            loop.stop()
-        loop.create_task(nuki.pair(pairing_completed))
-        loop.run_forever()
     else:
         if not nuki_manager.device_list:
             _add_devices_to_manager(data, nuki_manager)

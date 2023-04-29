@@ -33,8 +33,8 @@ class WebServer:
                         web.get('/callback/add', self.callback_add),
                         web.get('/callback/list', self.callback_list),
                         web.get('/callback/remove', self.callback_remove),
-                        web.get('/verify_pin', self.verify_pin),
-                        web.get('/request_last_log_entry', self.request_last_log_entry),
+                        web.get('/verify_security_pin', self.verify_security_pin),
+                        web.get('/request_log_entries', self.request_log_entries),
                         ])
         app.on_startup.append(self._startup)
         web.run_app(app, host=self._host, port=self._port, loop=self._loop)
@@ -172,24 +172,27 @@ class WebServer:
         res = json.dumps({"success": True, "batteryCritical": n.is_battery_critical})
         return web.Response(text=res)
 
-    async def verify_pin(self, request):
+    async def verify_security_pin(self, request):
         if not self._check_token(request):
             raise web.HTTPForbidden()
         n: NukiDevice = self.nuki_manager.nuki_by_id(int(request.query["nukiId"], base=16))
         try:
-            ret = await n.verify_pin(int(request.query["pin"], base=10))
+            ret = await n.verify_security_pin(int(request.query["pin"], base=10))
         except NukiErrorException as ex:
             res = json.dumps({"success" : False, "error_code": ex.error_code})
         else:
             res = json.dumps({"success": ret})
         return web.Response(text=res)
 
-    async def request_last_log_entry(self, request):
+    async def request_log_entries(self, request):
         if not self._check_token(request):
             raise web.HTTPForbidden()
         n: NukiDevice = self.nuki_manager.nuki_by_id(int(request.query["nukiId"], base=16))
+        security_pin=int(request.query.get("security_pin"), base=10)
+        count=int(request.query.get("count", default=1))
+        start_index=int(request.query.get("start_index", default=0))
         try:
-            ret = await n.request_last_log_entry(int(request.query["pin"], base=10))
+            ret = await n.request_log_entries(security_pin=security_pin, count=count, start_index=start_index)
         except NukiErrorException as ex:
             res = json.dumps({"success" : False, "error_code": ex.error_code})
         else:

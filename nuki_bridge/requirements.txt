@@ -1,4 +1,4 @@
 aiohttp==3.8.1
 bleak==0.20.1
 PyYAML==6.0
-pyNukiBT @ git+https://github.com/ronengr/pyNukiBT.git@main
+pyNukiBT==0.0.4
