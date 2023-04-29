@@ -33,8 +33,8 @@ class WebServer:
                         web.get('/callback/add', self.callback_add),
                         web.get('/callback/list', self.callback_list),
                         web.get('/callback/remove', self.callback_remove),
-                        web.get('/verify_pin', self.verify_pin),
-                        web.get('/request_last_log_entry', self.request_last_log_entry),
+                        web.get('/verify_security_pin', self.verify_security_pin),
+                        web.get('/request_log_entry', self.request_log_entry),
                         ])
         app.on_startup.append(self._startup)
         web.run_app(app, host=self._host, port=self._port, loop=self._loop)
@@ -137,6 +137,8 @@ class WebServer:
         return web.Response(text=json.dumps(resp))
 
     def _check_token(self, request):
+        #do no commit
+        return True
         token_valid = False
         if "hash" in request.query:
             rnr = request.query["rnr"]
@@ -172,24 +174,26 @@ class WebServer:
         res = json.dumps({"success": True, "batteryCritical": n.is_battery_critical})
         return web.Response(text=res)
 
-    async def verify_pin(self, request):
+    async def verify_security_pin(self, request):
         if not self._check_token(request):
             raise web.HTTPForbidden()
         n: NukiDevice = self.nuki_manager.nuki_by_id(int(request.query["nukiId"], base=16))
         try:
-            ret = await n.verify_pin(int(request.query["pin"], base=10))
+            ret = await n.verify_security_pin(int(request.query["pin"], base=10))
         except NukiErrorException as ex:
             res = json.dumps({"success" : False, "error_code": ex.error_code})
         else:
             res = json.dumps({"success": ret})
         return web.Response(text=res)
 
-    async def request_last_log_entry(self, request):
+    async def request_log_entry(self, request):
         if not self._check_token(request):
             raise web.HTTPForbidden()
         n: NukiDevice = self.nuki_manager.nuki_by_id(int(request.query["nukiId"], base=16))
+        pincode=int(request.query.get("pincode"), base=10)
+        count=int(request.query.get("count", default=1))
         try:
-            ret = await n.request_last_log_entry(int(request.query["pin"], base=10))
+            ret = await n.request_log_entry(pincode, count=count)
         except NukiErrorException as ex:
             res = json.dumps({"success" : False, "error_code": ex.error_code})
         else:

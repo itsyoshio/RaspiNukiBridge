@@ -101,33 +101,24 @@ def init_config(config_file, addon_config_file):
 
     # Pair
     nuki = NukiDevice(address, None, None, bridge_public_key, bridge_private_key, nuki_manager.app_id, nuki_manager.name, nuki_manager.type_id)
-    nuki_manager.add_nuki(nuki)
 
-    loop = asyncio.new_event_loop()
+    ret = nuki.pair()
+    nuki_public_key = ret["nuki_public_key"].hex()
+    auth_id = ret["auth_id"].hex()
+    logger.info(f"Pairing completed, auth_id: {auth_id}")
+    logger.info(f"nuki_public_key: {nuki_public_key}")
+    logger.info(f"********************************************************************")
+    logger.info(f"*                                                                  *")
+    logger.info(f"*                         Pairing completed!                       *")
+    logger.info(f"*                            Access Token                          *")
+    logger.info(f"* {token} *")
+    logger.info(f"*                                                                  *")
+    logger.info(f"********************************************************************")
+    smartlock['nuki_public_key'] = nuki_public_key
+    smartlock['auth_id'] = auth_id
 
-    nuki_manager.start(loop)
-
-    def pairing_completed(paired_nuki):
-        nuki_public_key = paired_nuki.nuki_public_key.hex()
-        auth_id = paired_nuki.auth_id.hex()
-        logger.info(f"Pairing completed, auth_id: {auth_id}")
-        logger.info(f"nuki_public_key: {nuki_public_key}")
-        logger.info(f"********************************************************************")
-        logger.info(f"*                                                                  *")
-        logger.info(f"*                         Pairing completed!                       *")
-        logger.info(f"*                            Access Token                          *")
-        logger.info(f"* {token} *")
-        logger.info(f"*                                                                  *")
-        logger.info(f"********************************************************************")
-        smartlock['nuki_public_key'] = nuki_public_key
-        smartlock['auth_id'] = auth_id
-
-        data['smartlock'] = [smartlock]
-        yaml.dump(data, open(config_file, 'w'))
-        loop.stop()
-
-    loop.create_task(nuki.pair(pairing_completed))
-    loop.run_forever()
+    data['smartlock'] = [smartlock]
+    yaml.dump(data, open(config_file, 'w'))
 
     return nuki_manager, data
 
