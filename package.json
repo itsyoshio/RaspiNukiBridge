@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/regevbr/RaspiNukiBridge.git"
+    "url": "git+https://github.com/itsyoshio/RaspiNukiBridge.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/regevbr/RaspiNukiBridge/issues"
+    "url": "https://github.com/itsyoshio/RaspiNukiBridge/issues"
   },
-  "homepage": "https://github.com/regevbr/RaspiNukiBridge#readme",
+  "homepage": "https://github.com/itsyoshio/RaspiNukiBridge#readme",
   "dependencies": {
     "prettier": "^2.5.1"
   }
